@@ -248,121 +248,11 @@ class Controller_Ftp_Log_Scum(object):
             print(e)
 
     async def checkCommandUser():
-        last_file_modif = 0
-        last_file_chat = ''
         list_user_command = []
-        d = datetime.date.today() - timedelta(hours=24, minutes=0, seconds=0)
-        time_d = int(d.strftime('%Y%m%d%H%M%S'))
-
-        d = datetime.datetime.now(timezone.utc) - timedelta(hours=0, minutes=2, seconds=0)
-        time_gtm = d.strftime('%Y%m%d%H%M%S')
-
-        host, port, username, password, logpath = Controller_Ftp_Log_Scum.get_ftp_config()
-        print(host, port, username, password, logpath)
-        client = aioftp.Client()
-        await client.connect(host, port)
-        await client.login(username,  password)
-
-        for filepath, info in await client.list(logpath):
-            if "chat" not in str(filepath):
-                continue
-            if(int(info['modify']) >  time_d and last_file_modif < int(info['modify'])):
-                last_file_modif = int(info['modify'])
-                last_file_chat = filepath
-                print(filepath,info['modify'])
-
-        filepath = last_file_chat
-        '''
-        for filepath, info in await client.list(logpath):
-            if "chat" not in str(filepath):
-                continue
-            if(int(info['modify']) >  time_d):
-        '''
-        global user_steam_pattern
-        print(filepath)
-        if(filepath == ''):
-            return False
-
-        data = bytearray()
-        pc = 0
-        stat = await client.stat(filepath)
-
-        async with client.download_stream(filepath) as stream:
-            async for block in stream.iter_by_block():
-                data += block
-                percent = len(data)/int(stat["size"])
-                if pc + percent > .05:
-                    pc -= .05
-
-        # update local copy and return its previous contents
-        old_data = fileio.update_binary(fname, data)
-
-
-        new_data = Controller_Ftp_Log_Scum.log_diff(old_data.decode('utf-16'), data.decode('utf-16'))
-        with open(file_tmp+'chat_log4.log', 'wb+') as f:
-            f.write(str.encode(new_data).decode().encode('utf-8'))
-
-
-        shakes = open(file_tmp+"chat_log4.log", "r")
-
-        for line_chat in shakes:
-            command = ''
-            line_chat = str(line_chat.strip().lstrip().rstrip())
-            #user_id_steam_name = user_steam_name_pattern.findall(line_chat)
-
-            if re.match(r"(.+)!entrer", line_chat):
-                command = 'teleport_portal_in'
-            elif re.match(r"(.+)!sortir", line_chat):
-                command = 'teleport_portal_out'
-            elif re.match(r"(.+)!bug", line_chat):
-                bug_teleport_to_zone = bug_teleport_to_zone_pattern.findall(line_chat)
-                command = 'bug_teleport_to_zone'+str(bug_teleport_to_zone[0])
-            elif re.match(r"(.+)!shop_go", line_chat):
-                command = 'go_shop'
-            elif re.match(r"(.+)!shop_back", line_chat):
-                command = 'return_position_player'
-            elif re.match(r"(.+)!sauter", line_chat):
-                command = 'jump'
-            elif re.match(r"(.+)!ping", line_chat):
-                command = 'ping'
-            elif re.match(r"(.+)!horde", line_chat):
-                user_id_steam = user_steam_pattern.findall(line_chat)
-                if(user_id_steam[0] == '76561198029980673' or user_id_steam[0] == '76561198026254419'):
-                    command = 'horde'
-            elif re.match(r"(.+)!restart", line_chat):
-                user_id_steam = user_steam_pattern.findall(line_chat)
-                if(user_id_steam[0] == '76561198029980673' or user_id_steam[0] == '76561198026254419'):
-                    command = 'restart'
-            '''
-            elif re.match(r"(.+)!bot_pack_debutant", line_chat):
-                command = 'claim_starter_pack'
-            elif re.match(r"(.+)!buy_car_market", line_chat):
-                buy_car_market = buy_car_market_pattern.findall(line_chat)
-                command = 'buy_car_market_'+str(buy_car_market[0])
-            '''
-
-            if(command != ''):
-                timestamp_id_pattern = timestamp_pattern.findall(line_chat)
-                user_id_steam = user_steam_pattern.findall(line_chat)
-                user_name_steam = user_steam_name_pattern.findall(line_chat)
-
-                if(user_id_steam[0]):
-                    timestamp_id = timestamp_id_pattern[0]
-                    timestamp_msg = timestamp_id.replace('-','').replace('.','')
-                    user_id_steam = user_id_steam[0]
-                    user_name_steam = user_name_steam[0]
-
-                    print(timestamp_id,user_id_steam,user_name_steam,command)
-                    if(timestamp_msg > time_gtm):
-                        list_user_command.append({'timestamp': timestamp_msg, 'userID': user_id_steam,'userName': user_name_steam, 'command_chat': command})
-
-
-
-        url = "https://rpfrance.inov-agency.com/messenger.php?get_message_waiting=true"
-
-        r = requests.get(url)
-        json_obj = json.loads(r.text)
         try:
+            url = "https://rpfrance.inov-agency.com/messenger.php?get_message_waiting=true"
+            r = requests.get(url)
+            json_obj = json.loads(r.text)
             for item in json_obj['item']:
                 #message = json.loads(item['message'])
                 try:
@@ -371,7 +261,143 @@ class Controller_Ftp_Log_Scum(object):
                     list_user_command.append({'timestamp': item['message']['timestamp'], 'userID': item['message']['userID'],'userName': item['message']['userName'], 'command_chat': item['message']['command_chat']})
 
         except Exception as e:
-            print("Error:",e)
+            print("Error checkCommandUser:",e)
+            pass
+
+        return list_user_command
+
+    async def checkCommandUser2():
+
+        list_user_command = []
+
+        try:
+
+            last_file_modif = 0
+            last_file_chat = ''
+            d = datetime.date.today() - timedelta(hours=24, minutes=0, seconds=0)
+            time_d = int(d.strftime('%Y%m%d%H%M%S'))
+
+            d = datetime.datetime.now(timezone.utc) - timedelta(hours=0, minutes=2, seconds=0)
+            time_gtm = d.strftime('%Y%m%d%H%M%S')
+
+            host, port, username, password, logpath = Controller_Ftp_Log_Scum.get_ftp_config()
+            print(host, port, username, password, logpath)
+            client = aioftp.Client(socket_timeout=10)
+            await client.connect(host, port)
+            await client.login(username,  password)
+
+            for filepath, info in await client.list(logpath):
+                if "chat" not in str(filepath):
+                    continue
+                if(int(info['modify']) >  time_d and last_file_modif < int(info['modify'])):
+                    last_file_modif = int(info['modify'])
+                    last_file_chat = filepath
+                    print(filepath,info['modify'])
+
+            filepath = last_file_chat
+            '''
+            for filepath, info in await client.list(logpath):
+                if "chat" not in str(filepath):
+                    continue
+                if(int(info['modify']) >  time_d):
+            '''
+            global user_steam_pattern
+            print(filepath)
+            if(filepath == ''):
+                return False
+
+            data = bytearray()
+            pc = 0
+            stat = await client.stat(filepath)
+
+            async with client.download_stream(filepath) as stream:
+                async for block in stream.iter_by_block():
+                    data += block
+                    percent = len(data)/int(stat["size"])
+                    if pc + percent > .05:
+                        pc -= .05
+
+            # update local copy and return its previous contents
+            old_data = fileio.update_binary(fname, data)
+
+
+            new_data = Controller_Ftp_Log_Scum.log_diff(old_data.decode('utf-16'), data.decode('utf-16'))
+            with open(file_tmp+'chat_log4.log', 'wb+') as f:
+                f.write(str.encode(new_data).decode().encode('utf-8'))
+
+
+            shakes = open(file_tmp+"chat_log4.log", "r")
+
+            for line_chat in shakes:
+                command = ''
+                line_chat = str(line_chat.strip().lstrip().rstrip())
+                #user_id_steam_name = user_steam_name_pattern.findall(line_chat)
+
+                if re.match(r"(.+)!entrer", line_chat):
+                    command = 'teleport_portal_in'
+                elif re.match(r"(.+)!sortir", line_chat):
+                    command = 'teleport_portal_out'
+                elif re.match(r"(.+)!bug", line_chat):
+                    bug_teleport_to_zone = bug_teleport_to_zone_pattern.findall(line_chat)
+                    command = 'bug_teleport_to_zone'+str(bug_teleport_to_zone[0])
+                elif re.match(r"(.+)!shop_go", line_chat):
+                    command = 'go_shop'
+                elif re.match(r"(.+)!shop_back", line_chat):
+                    command = 'return_position_player'
+                elif re.match(r"(.+)!sauter", line_chat):
+                    command = 'jump'
+                elif re.match(r"(.+)!ping", line_chat):
+                    command = 'ping'
+                elif re.match(r"(.+)!horde", line_chat):
+                    user_id_steam = user_steam_pattern.findall(line_chat)
+                    if(user_id_steam[0] == '76561198029980673' or user_id_steam[0] == '76561198026254419'):
+                        command = 'horde'
+                elif re.match(r"(.+)!restart", line_chat):
+                    user_id_steam = user_steam_pattern.findall(line_chat)
+                    if(user_id_steam[0] == '76561198029980673' or user_id_steam[0] == '76561198026254419'):
+                        command = 'restart'
+                '''
+                elif re.match(r"(.+)!bot_pack_debutant", line_chat):
+                    command = 'claim_starter_pack'
+                elif re.match(r"(.+)!buy_car_market", line_chat):
+                    buy_car_market = buy_car_market_pattern.findall(line_chat)
+                    command = 'buy_car_market_'+str(buy_car_market[0])
+                '''
+
+                if(command != ''):
+                    timestamp_id_pattern = timestamp_pattern.findall(line_chat)
+                    user_id_steam = user_steam_pattern.findall(line_chat)
+                    user_name_steam = user_steam_name_pattern.findall(line_chat)
+
+                    if(user_id_steam[0]):
+                        timestamp_id = timestamp_id_pattern[0]
+                        timestamp_msg = timestamp_id.replace('-','').replace('.','')
+                        user_id_steam = user_id_steam[0]
+                        user_name_steam = user_name_steam[0]
+
+                        print(timestamp_id,user_id_steam,user_name_steam,command)
+                        if(timestamp_msg > time_gtm):
+                            list_user_command.append({'timestamp': timestamp_msg, 'userID': user_id_steam,'userName': user_name_steam, 'command_chat': command})
+
+
+
+            url = "https://rpfrance.inov-agency.com/messenger.php?get_message_waiting=true"
+
+            r = requests.get(url)
+            json_obj = json.loads(r.text)
+            try:
+                for item in json_obj['item']:
+                    #message = json.loads(item['message'])
+                    try:
+                        list_user_command.append({'timestamp': item['message']['timestamp'], 'userID': item['message']['userID'],'userName': item['message']['userName'], 'command_chat': item['message']['command_chat'], 'code_banque': item['message']['code_banque'], 'code_shop_banque': item['message']['code_shop_banque'], 'value_item': item['message']['value_item']})
+                    except:
+                        list_user_command.append({'timestamp': item['message']['timestamp'], 'userID': item['message']['userID'],'userName': item['message']['userName'], 'command_chat': item['message']['command_chat']})
+
+            except Exception as e:
+                print("Error:",e)
+                pass
+
+        except:
             pass
 
         return list_user_command

@@ -21,6 +21,7 @@ class Action:
 
     currentScope = None
     clean = False
+    current_pos_start_pack = 0
 
 
     def __init__(self, RES, CON, SCB, PRC_CHAT, PAG):
@@ -233,8 +234,11 @@ class Action:
         self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Ta demande du Pack de bienvenue est prise en compte, merci de patienter quelques instants le temps que je prépare ta  commande. Prépare-toi à être transporté dans moins de 2 minutes.')
         self.PRC_CHAT.doClean()
         #self.PRC_CHAT.send(prop_user['messages']['starterPack'])
-        self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130")
-        time.sleep(15)
+        if(self.current_pos_start_pack == 0):
+            self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130")
+        else:
+            self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130")
+        time.sleep(20)
         self.PRC_CHAT.send(f"#spawnitem BP_Weapon_BlackHawk_Crossbow 1")
         self.PRC_CHAT.send(f"#spawnItem Improvised_Quiver_01 1")
         self.PRC_CHAT.send(f"#spawnitem BP_Ammo_Crossbow_Bolt_Carbon 10")
@@ -249,6 +253,10 @@ class Action:
         self.PRC_CHAT.send(f"#spawnvehicle BP_Quad_01_A 1")
         self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130 \"{prop_user['userID']}\"")
         self.PRC_CHAT.teleportOrigin()
+        time.sleep(20)
+        self.current_pos_start_pack = self.current_pos_start_pack + 1
+        if(self.current_pos_start_pack > 1):
+            self.current_pos_start_pack = 0
 
     def teleportToJump(self,prop_user, jump = 3):
         player_x,player_y,player_z = self.getLocationPlayer(prop_user['userID'])
@@ -800,21 +808,32 @@ class Action:
         f.close()
 
         list_item = [
-
+            'Christmas_Present_AK15 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
         ]
+
         list_spawn = [
             {
                 'name': 'spawn_1',
                 'description': '\u200b',
                 'localisation': 'A3',
-                'nbr_item': 4,
-                'item_spawn': {"x": 257997.594, "y": -504805.344, "z": 7627.810},
-                'item': [
-                        'Christmas_Present_AK15 1',
-                        'Christmas_Present_AKS_74U_01 1',
-                        'Christmas_Present_Ghillie 1',
-                        'Christmas_Present_SVD_01 1',
-                ],
+                'nbr_item': 2,
+                'item_spawn':[
+                            {"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 2},
+                            #{"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 1},
+                            #{"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 1},
+                        ],
                 'spawn_z': [
                         {"loc": "X=259075 Y=-506074 Z=7591", "nbr": randint(5, 8)},
                         {"loc": "X=257363 Y=-504037 Z=7658", "nbr": randint(5, 8)},
@@ -830,14 +849,8 @@ class Action:
                 'name': 'spawn_2',
                 'description': 'N\'y allez pas seul...',
                 'localisation': 'A2-Bunker',
-                'nbr_item': 4,
-                'item_spawn': {"x": 257997.594, "y": -504805.344, "z": 7627.810},
-                'item': [
-                        'Christmas_Present_AK15 1',
-                        'Christmas_Present_AKS_74U_01 1',
-                        'Christmas_Present_Ghillie 1',
-                        'Christmas_Present_SVD_01 1',
-                ],
+                'nbr_item': 3,
+            'item_spawn':[ {"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 3}],
                 'spawn_z': [
                         {"loc": "X=-41144.141 Y=-324788.031 Z=16218.939", "nbr": randint(5, 8)},
                         {"loc": "X=-42533.527 Y=-324728.156 Z=16010.470", "nbr": randint(5, 8)},
@@ -855,18 +868,23 @@ class Action:
             },
         ]
         #'''
-        point_spawn = list_spawn[0]
-        time.sleep(1)
-        self.PRC_CHAT.send("#Teleport {x} {y} {z}".format(x=point_spawn['item_spawn']['x'], y=point_spawn['item_spawn']['y'], z=point_spawn['item_spawn']['z']))
+        index_spawn  = randint(0,(len(list_spawn)-1))
+        index_item_spawn = randint(0,(len(list_spawn[index_spawn]['item_spawn'])-1))
+        point_spawn = list_spawn[index_spawn]
+        point_spawn_coor = point_spawn['item_spawn'][index_item_spawn]
+        item_spawn_list_random = random.sample(range(0, (len(list_item)-1)), point_spawn['nbr_item']) #random unique value in item
+        #print(list_spawn[index_spawn]['name'],index_item_spawn,point_spawn['item_spawn'][index_item_spawn],item_spawn_list_random,point_spawn_coor)
+
+        self.PRC_CHAT.send("#Teleport {x} {y} {z}".format(x=point_spawn_coor['x'], y=point_spawn_coor['y'], z=point_spawn_coor['z']))
         time.sleep(60)
-        for item in point_spawn['item']:
-            self.PRC_CHAT.send("#SpawnItem {item}".format(item=item))
+        for index_item in item_spawn_list_random:
+            for item in list_item[index_item].split('/'):
+                print("#SpawnItem {item}".format(item=item))
 
         for point_spawn_z in point_spawn['spawn_z']:
-            self.PRC_CHAT.send("#Teleport {loc}".format(loc=point_spawn_z['loc'].replace('X=', '').replace(' Y=', ' ').replace(' Z=', ' ')))
-            time.sleep(10)
+            print("#Teleport {loc}".format(loc=point_spawn_z['loc'].replace('X=', '').replace(' Y=', ' ').replace(' Z=', ' ')))
+            time.sleep(20)
             self.randomZ(point_spawn_z['nbr'])
-
 
         loginDict = {
                         'command': json.dumps({

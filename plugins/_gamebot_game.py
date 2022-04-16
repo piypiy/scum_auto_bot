@@ -66,7 +66,7 @@ class RunBot(Thread):
           PAG.press('t')
 
           self.PRC_CHAT.teleportOrigin()
-          time.sleep(1)
+          time.sleep(60)
           self.PRC_CHAT.viewInfoPlayer()
 
           last_command_user = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')

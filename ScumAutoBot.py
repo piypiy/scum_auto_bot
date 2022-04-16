@@ -271,6 +271,7 @@ while loop:
                 if(not RDY.doIt()):
                     RES.addError('Unable to get ready (MAIN)')
                 RES.send()
+                GB_CHK.setBusy(True)
                 last_command_user = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
                 PAG.press('esc')
                 PAG.press('x')
@@ -280,8 +281,10 @@ while loop:
                 url = "https://rpfrance.inov-agency.com/check_bot.php?status="+statut
                 r = requests.get(url)
                 PRC_CHAT.viewInfoPlayer()
+                GB_CHK.setBusy(False)
 
         if(GB_CHK.getBusy() == False):
+            nbr_busy_loop = 0
             task = asyncio.ensure_future(Controller_Ftp_Log_Scum.checkCommandUser())
             loop = asyncio.get_event_loop()
             listActions['list_user_command'] = loop.run_until_complete(task)
@@ -392,7 +395,13 @@ while loop:
                         '''
                         #elif(re.match(r"bug_teleport_to_zone", user_command['command_chat'])):
         else:
-            RES.printer("Bot is busy")
+            if(statut == 'run'):
+                nbr_busy_loop = nbr_busy_loop + 1
+                if(nbr_busy_loop > 3):
+                    GB_CHK.setBusy(False)
+                    nbr_busy_loop = 0
+
+            RES.printer("Bot is busy wait for the end of the current action")
 
     except Exception as e:
         RES.printer('Error in main loop'+ str(e))
