@@ -67,6 +67,7 @@ class Controller_Ftp_Log_Scum(object):
                 json_obj['ftp']['logpath'])
 
     async def checkLoginUser(click_button="left"):
+        print("checkLoginUser")
         last_file_modif = 0
         last_file_chat = ''
         list_user_command = []
@@ -77,7 +78,7 @@ class Controller_Ftp_Log_Scum(object):
         host, port, username, password, logpath = Controller_Ftp_Log_Scum.get_ftp_config(
             click_button)
 
-        client = aioftp.Client()
+        client = aioftp.Client(socket_timeout=10)
         await client.connect(host, port)
         await client.login(username,  password)
 
@@ -152,7 +153,7 @@ class Controller_Ftp_Log_Scum(object):
 
     async def checkVictimeUser(click_button="left"):
         try:
-            # print('checkVictimeUser')
+            print('checkVictimeUser')
             last_file_modif = 0
             last_file_chat = ''
             list_user_command = []
@@ -166,7 +167,7 @@ class Controller_Ftp_Log_Scum(object):
             host, port, username, password, logpath = Controller_Ftp_Log_Scum.get_ftp_config(
                 click_button)
 
-            client = aioftp.Client()
+            client = aioftp.Client(socket_timeout=10)
             await client.connect(host, port)
             await client.login(username,  password)
 
