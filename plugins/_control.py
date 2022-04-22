@@ -283,6 +283,8 @@ class Control:
     def stopGame(self):
         self.RES.printer('STOPGAME')
         self.pkill("SCUM.exe")
+        url = "https://rpfrance.inov-agency.com/check_bot.php?status=sleep"
+        r = requests.get(url)
 
     def findProcessKill(self, processName='SCUM.EXE'):
         # Iterate over the all the running process

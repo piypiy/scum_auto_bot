@@ -3,12 +3,16 @@ from pathlib import Path
 from random import *
 import random
 from lib.controllerFtpLogScum import Controller_Ftp_Log_Scum
+from collections import OrderedDict
 import subprocess
+import numpy as np
 import time
 import sys
 import os
 import requests
 import json
+import re
+import math
 
 
 class Action:
@@ -21,6 +25,7 @@ class Action:
 
     currentScope = None
     clean = False
+    current_pos_start_pack = 0
 
 
     def __init__(self, RES, CON, SCB, PRC_CHAT, PAG):
@@ -233,8 +238,15 @@ class Action:
         self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Ta demande du Pack de bienvenue est prise en compte, merci de patienter quelques instants le temps que je prépare ta  commande. Prépare-toi à être transporté dans moins de 2 minutes.')
         self.PRC_CHAT.doClean()
         #self.PRC_CHAT.send(prop_user['messages']['starterPack'])
-        self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130")
-        time.sleep(15)
+        if(self.current_pos_start_pack == 0):
+            self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130")
+        elif(self.current_pos_start_pack == 1):
+            self.PRC_CHAT.send(f"#teleport 574580.375 -230398.891 356.130")
+        elif(self.current_pos_start_pack == 2):
+            self.PRC_CHAT.send(f"#teleport 567491.063 -225879.578 355.990")
+        else:
+            self.PRC_CHAT.send(f"#teleport 575542.375 -230431.813 356.130")
+        time.sleep(20)
         self.PRC_CHAT.send(f"#spawnitem BP_Weapon_BlackHawk_Crossbow 1")
         self.PRC_CHAT.send(f"#spawnItem Improvised_Quiver_01 1")
         self.PRC_CHAT.send(f"#spawnitem BP_Ammo_Crossbow_Bolt_Carbon 10")
@@ -249,6 +261,10 @@ class Action:
         self.PRC_CHAT.send(f"#spawnvehicle BP_Quad_01_A 1")
         self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130 \"{prop_user['userID']}\"")
         self.PRC_CHAT.teleportOrigin()
+        time.sleep(20)
+        self.current_pos_start_pack = self.current_pos_start_pack + 1
+        if(self.current_pos_start_pack > 3):
+            self.current_pos_start_pack = 0
 
     def teleportToJump(self,prop_user, jump = 3):
         player_x,player_y,player_z = self.getLocationPlayer(prop_user['userID'])
@@ -469,6 +485,7 @@ class Action:
             h = l
 
         player_x,player_y,player_z = self.getLocationPlayer(steam_id)
+        ''''''
         print(player_x,player_y,player_z)
         print('pos:',(x - l),(x + l),(y - h),(y + h))
 
@@ -478,8 +495,27 @@ class Action:
 
         return False
 
+    def isPosNear(self,player_x,player_y,player_z,x,y,l,h = 0):
+        #ajust h and l
+        x = float(x)
+        y = float(y)
+        l = float(l) * 120
+        if(h > 0):
+            h = float(h) * 120
+        else:
+            h = l
+
+        if(float(player_x) > (x - l) and float(player_x) < (x + l)):
+            if(float(player_y) > (y - h) and float(player_y) < (y + h)):
+                return True
+
+        return False
+
     def getUserLocation(self,steam_id):
         p = self.PRC_CHAT.send('#Location '+steam_id, read=True)
+        time.sleep(0.2)
+        self.PAG.click(110,500)
+        time.sleep(0.2)
         playerLoc = (p[(p.find(':')+1):]).strip().split()
         return playerLoc[0][2:], playerLoc[1][2:], playerLoc[2][2:]
 
@@ -678,39 +714,40 @@ class Action:
 
 
     def buyBoatMarket(self,prop_user, type_banque = 'market'):
-        if(self.isUserNear(prop_user['userID'], 570608, -229554, 20)):
-            if(prop_user['code_banque'] != ''):
-                self.PRC_CHAT.doClean()
-                self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Votre commande est en cours de préparation. Merci de patienter.')
-                self.PRC_CHAT.send(f"#teleport 567687.563 -227440.031 7.590")
-                time.sleep(10)
-                boat = prop_user['command_chat'].replace('buy_boat_market_player_','').replace('buy_boat_market_','')
-                self.PRC_CHAT.send(f"#SpawnVehicle {boat} 1")
-                self.sendAlertDiscord(prop_user['player_info']['discord_id'],'La commande pour l\'achat de votre bateau est prête. Rapprochez-vous du hangar à bateaux pour récupérer votre nouveau joujou.')
+        #if(self.isUserNear(prop_user['userID'], 570608, -229554, 20)):
+        if(prop_user['code_banque'] != ''):
+            self.PRC_CHAT.doClean()
+            self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Votre commande est en cours de préparation. Merci de patienter.')
+            self.PRC_CHAT.send(f"#teleport 567687.563 -227440.031 7.590")
+            time.sleep(10)
+            boat = prop_user['command_chat'].replace('buy_boat_market_player_','').replace('buy_boat_market_','')
+            b = self.PRC_CHAT.send(f"#SpawnVehicle {boat} 1",True)
+            print(b)
+            self.sendAlertDiscord(prop_user['player_info']['discord_id'],'La commande pour l\'achat de votre bateau est prête. Rapprochez-vous du hangar à bateaux pour récupérer votre nouveau joujou.')
 
-                try:
-                    url = "https://rpfrance.inov-agency.com/banque.php"
-                    if(type_banque == 'market'):
-                        user_command = prop_user['code_shop_banque']+" "+str(int(0-prop_user['value_item']))
-                    else:
-                        user_command = prop_user['code_banque']+" "+str(int(0-prop_user['value_item']))
+            try:
+                url = "https://rpfrance.inov-agency.com/banque.php"
+                if(type_banque == 'market'):
+                    user_command = prop_user['code_shop_banque']+" "+str(int(0-prop_user['value_item']))
+                else:
+                    user_command = prop_user['code_banque']+" "+str(int(0-prop_user['value_item']))
 
-                    r = requests.post(url, data={
-                        'user_id': 'CyberWise3552',
-                        'from': 'scum_tool',
-                        'command_chat': user_command
-                        })
-                    self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Votre commande est prête.')
-                except Exception as e:
-                    print("[Error] buyBoatMarket : "+str(e))
-                    pass
+                r = requests.post(url, data={
+                    'user_id': 'CyberWise3552',
+                    'from': 'scum_tool',
+                    'command_chat': user_command
+                    })
+                self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Votre commande est prête.')
+            except Exception as e:
+                print("[Error] buyBoatMarket : "+str(e))
+                pass
 
-                self.PRC_CHAT.teleportOrigin()
-                time.sleep(10)
-            else:
-                self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Vous n\'avez aucun compte enregistré à la banque! Merci de vous rapprocher du personnel de la banque.')
+            self.PRC_CHAT.teleportOrigin()
+            time.sleep(10)
         else:
-            self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Rapprochez-vous du magasin de bateaux en B4 pour pouvoir acheter un bateau.')
+            self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Vous n\'avez aucun compte enregistré à la banque! Merci de vous rapprocher du personnel de la banque.')
+        #else:
+            #self.sendAlertDiscord(prop_user['player_info']['discord_id'],'Rapprochez-vous du magasin de bateaux en B4 pour pouvoir acheter un bateau.')
 
 
     def buyCarMarket(self,prop_user):
@@ -756,9 +793,9 @@ class Action:
 
         if(modulo > 0):
             for i in range(modulo):
-                self.PRC_CHAT.send(f"#spawnitem BP_Cash 10 {heal}")
+                self.PRC_CHAT.send(f"#SpawnItem BP_Cash 10 CashValue 5000 {heal}")
         if(reste > 0):
-            self.PRC_CHAT.send(f"#spawnitem BP_Cash {reste} {heal}")
+            self.PRC_CHAT.send(f"#SpawnItem BP_Cash {reste} CashValue 5000 {heal}")
 
     def banqueWithDrawal(self,prop_user):
         if(prop_user['code_banque'] != ''):
@@ -800,21 +837,32 @@ class Action:
         f.close()
 
         list_item = [
-
+            'Christmas_Present_AK15 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
+            'Christmas_Present_AKS_74U_01 1',
+            'Christmas_Present_Ghillie 1',
+            'Christmas_Present_SVD_01 1',
         ]
+
         list_spawn = [
             {
                 'name': 'spawn_1',
                 'description': '\u200b',
                 'localisation': 'A3',
-                'nbr_item': 4,
-                'item_spawn': {"x": 257997.594, "y": -504805.344, "z": 7627.810},
-                'item': [
-                        'Christmas_Present_AK15 1',
-                        'Christmas_Present_AKS_74U_01 1',
-                        'Christmas_Present_Ghillie 1',
-                        'Christmas_Present_SVD_01 1',
-                ],
+                'nbr_item': 2,
+                'item_spawn':[
+                            {"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 2},
+                            #{"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 1},
+                            #{"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 1},
+                        ],
                 'spawn_z': [
                         {"loc": "X=259075 Y=-506074 Z=7591", "nbr": randint(5, 8)},
                         {"loc": "X=257363 Y=-504037 Z=7658", "nbr": randint(5, 8)},
@@ -830,14 +878,8 @@ class Action:
                 'name': 'spawn_2',
                 'description': 'N\'y allez pas seul...',
                 'localisation': 'A2-Bunker',
-                'nbr_item': 4,
-                'item_spawn': {"x": 257997.594, "y": -504805.344, "z": 7627.810},
-                'item': [
-                        'Christmas_Present_AK15 1',
-                        'Christmas_Present_AKS_74U_01 1',
-                        'Christmas_Present_Ghillie 1',
-                        'Christmas_Present_SVD_01 1',
-                ],
+                'nbr_item': 3,
+            'item_spawn':[ {"x": 257997.594, "y": -504805.344, "z": 7627.810, 'nb_item': 3}],
                 'spawn_z': [
                         {"loc": "X=-41144.141 Y=-324788.031 Z=16218.939", "nbr": randint(5, 8)},
                         {"loc": "X=-42533.527 Y=-324728.156 Z=16010.470", "nbr": randint(5, 8)},
@@ -855,18 +897,23 @@ class Action:
             },
         ]
         #'''
-        point_spawn = list_spawn[0]
-        time.sleep(1)
-        self.PRC_CHAT.send("#Teleport {x} {y} {z}".format(x=point_spawn['item_spawn']['x'], y=point_spawn['item_spawn']['y'], z=point_spawn['item_spawn']['z']))
+        index_spawn  = randint(0,(len(list_spawn)-1))
+        index_item_spawn = randint(0,(len(list_spawn[index_spawn]['item_spawn'])-1))
+        point_spawn = list_spawn[index_spawn]
+        point_spawn_coor = point_spawn['item_spawn'][index_item_spawn]
+        item_spawn_list_random = random.sample(range(0, (len(list_item)-1)), point_spawn['nbr_item']) #random unique value in item
+        #print(list_spawn[index_spawn]['name'],index_item_spawn,point_spawn['item_spawn'][index_item_spawn],item_spawn_list_random,point_spawn_coor)
+
+        self.PRC_CHAT.send("#Teleport {x} {y} {z}".format(x=point_spawn_coor['x'], y=point_spawn_coor['y'], z=point_spawn_coor['z']))
         time.sleep(60)
-        for item in point_spawn['item']:
-            self.PRC_CHAT.send("#SpawnItem {item}".format(item=item))
+        for index_item in item_spawn_list_random:
+            for item in list_item[index_item].split('/'):
+                print("#SpawnItem {item}".format(item=item))
 
         for point_spawn_z in point_spawn['spawn_z']:
-            self.PRC_CHAT.send("#Teleport {loc}".format(loc=point_spawn_z['loc'].replace('X=', '').replace(' Y=', ' ').replace(' Z=', ' ')))
-            time.sleep(10)
+            print("#Teleport {loc}".format(loc=point_spawn_z['loc'].replace('X=', '').replace(' Y=', ' ').replace(' Z=', ' ')))
+            time.sleep(20)
             self.randomZ(point_spawn_z['nbr'])
-
 
         loginDict = {
                         'command': json.dumps({
@@ -901,3 +948,127 @@ class Action:
                             }]),
                     }
         r = requests.post('https://rpfrance.inov-agency.com/messenger.php', data=MessageDict)
+
+
+    def getListCar(self,x_user, y_user, z_user):
+        position_vehicule_pattern = re.compile(r"X=(.*) Y=(.*) Z=(.*)")
+        position_vehicule_id_name = re.compile(r"#([0-9]+): (.*)")
+        list_vehicule = {}
+        is_txt_vehicule = self.PRC_CHAT.send("#ListSpawnedVehicles", read=True)
+
+        if(is_txt_vehicule != '' and is_txt_vehicule != 'is_txt_vehicule' and is_txt_vehicule != None and is_txt_vehicule != False):
+            #x_user, y_user, z_user = self.getLocationPlayer('76561198029980673')
+            x_user = float(x_user)
+            y_user = float(y_user)
+            z_user = float(z_user)
+            lineDict = is_txt_vehicule.split('\n')
+            pos = 0
+            pos_user = (int(x_user), int(y_user), int(z_user))
+            for line in lineDict:
+                line = str(line.strip().lstrip().rstrip().replace(
+                    "\n", "").replace("\r", ""))
+                # print(">>>",line)
+                if(line != ''):
+                    vehiculeDict = {}
+                    vehicule_line = line.split('   ')
+                    alias = ''
+
+                    try:
+                        if(vehicule_line[3] != ''):
+                            alias = vehicule_line[3]
+                    except:
+                        pass
+
+                    position_vehicule_find = position_vehicule_pattern.findall(
+                        vehicule_line[2])
+                    pos_vehicule = (float(position_vehicule_find[0][0]), float(
+                        position_vehicule_find[0][1]), float(position_vehicule_find[0][2]))
+                    #print(pos_user, pos_vehicule)
+
+                    name_id = position_vehicule_id_name.findall(
+                        vehicule_line[0])
+
+                    inf_car = self.getCarSelectInfo(name_id[0][1])
+
+
+                    try:
+                        vehiculeDict = {'id': name_id[0][0], 'name': name_id[0][1], 'position': vehicule_line[2], "distance": self.calDistance(
+                        pos_user, pos_vehicule), "alias": alias, "category": inf_car['category'], "type": inf_car['type']}
+                    except:
+                        vehiculeDict = {'id': name_id[0][0], 'name': name_id[0][1], 'position': vehicule_line[2], "distance": self.calDistance(
+                            pos_user, pos_vehicule), "alias": alias}
+
+                    list_vehicule[pos] = vehiculeDict
+                    pos += 1
+            list_vehicule = OrderedDict(
+                sorted(list_vehicule.items(), key=lambda kv: kv[1]['distance']))
+        else:
+            print("No vehicule")
+        return list_vehicule
+
+
+    def calDistance(self, pos_user, pos_vehicule):
+        a = np.array(pos_user)
+        b = np.array(pos_vehicule)
+        dist = np.linalg.norm(a-b)
+        return math.trunc(dist / 120)
+
+
+    def getCarSelectInfo(self,car_select, car_select_info="base-purchase-price"):
+
+        cars =  [
+                    {"tradeable-code" : "Car_Repair_Kit", "category" : "kit", "type" : "voiture", "base-purchase-price" : "1500", "base-sell-price" : "450", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "Aeroplane_Repair_Kit", "category" : "kit", "type" : "avions", "base-purchase-price" : "11000", "base-sell-price" : "300", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "Tire_Repair_Kit", "category" : "kit", "type" : "pneux", "base-purchase-price" : "850", "base-sell-price" : "-1", "delta-price" : "1", "can-be-purchased" : "true"},
+
+                    {"tradeable-code" : "BP_Tractor_01_A", "category" : "tracteur", "type" : "rouge", "base-purchase-price" : "10000", "base-sell-price" : "2000", "delta-price" : "1", "can-be-purchased" : "true"},
+
+                    {"tradeable-code" : "BP_Quad_01_A", "category" : "Quad", "type" : "jaune", "base-purchase-price" : "4000", "base-sell-price" : "400", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_Quad_01_B", "category" : "Quad", "type" : "bleu", "base-purchase-price" : "8000", "base-sell-price" : "1600", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Quad_01_C", "category" : "Quad", "type" : "rouge", "base-purchase-price" : "5000", "base-sell-price" : "1000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Quad_01_D", "category" : "Quad", "type" : "camo", "base-purchase-price" : "15000", "base-sell-price" : "3000", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_SUV_01_B", "category" : "Suv", "type" : "police", "base-purchase-price" : "10000", "base-sell-price" : "2000", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_SUV_01_D", "category" : "Suv", "type" : "police", "base-purchase-price" : "1000000", "base-sell-price" : "16000", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_SUV_01_C", "category" : "Suv", "type" : "police", "base-purchase-price" : "1000000", "base-sell-price" : "16000", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_SUV_01_A", "category" : "Suv", "type" : "bleu", "base-purchase-price" : "25000", "base-sell-price" : "5000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_SUV_01_E", "category" : "Suv", "type" : "noir", "base-purchase-price" : "50000", "base-sell-price" : "10000", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_Pickup_01_D", "category" : "Pickup", "type" : "rouge", "base-purchase-price" : "20000", "base-sell-price" : "4000", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_Pickup_01_A", "category" : "Pickup", "type" : "orange", "base-purchase-price" : "30000", "base-sell-price" : "6000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Pickup_01_B", "category" : "Pickup", "type" : "noir", "base-purchase-price" : "50000", "base-sell-price" : "10000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Pickup_01_C", "category" : "Pickup", "type" : "bleu", "base-purchase-price" : "50000", "base-sell-price" : "10000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Pickup_01_E", "category" : "Pickup", "type" : "blanc", "base-purchase-price" : "30000", "base-sell-price" : "6000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Pickup_01_F", "category" : "Pickup", "type" : "camo", "base-purchase-price" : "70000", "base-sell-price" : "16000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Pickup_01_G", "category" : "Pickup", "type" : "rouge/blanc", "base-purchase-price" : "30000", "base-sell-price" : "6000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Pickup_01_HellRiders", "category" : "Pickup", "type" : "hellriders", "base-purchase-price" : "80000", "base-sell-price" : "16000", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_Cruiser_B", "category" : "Cruiser", "type" : "violet", "base-purchase-price" : "15000", "base-sell-price" : "3000", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_Cruiser_D", "category" : "Cruiser", "type" : "turquoise", "base-purchase-price" : "20000", "base-sell-price" : "4000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Cruiser_01", "category" : "Cruiser", "type" : "noir", "base-purchase-price" : "20000", "base-sell-price" : "4000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Cruiser_C", "category" : "Cruiser", "type" : "rouge", "base-purchase-price" : "20000", "base-sell-price" : "4000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Cruiser_E", "category" : "Cruiser", "type" : "vert", "base-purchase-price" : "20000", "base-sell-price" : "4000", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_Dirtbike_E", "category" : "Moto Cross", "type" : "jaune", "base-purchase-price" : "10000", "base-sell-price" : "2000", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_Dirtbike_A", "category" : "Moto Cross", "type" : "rouge", "base-purchase-price" : "12000", "base-sell-price" : "2400", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Dirtbike_B", "category" : "Moto Cross", "type" : "noir", "base-purchase-price" : "15000", "base-sell-price" : "3000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Dirtbike_C", "category" : "Moto Cross", "type" : "bleu", "base-purchase-price" : "15000", "base-sell-price" : "3000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Dirtbike_D", "category" : "Moto Cross", "type" : "vert", "base-purchase-price" : "12000", "base-sell-price" : "2400", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Dirtbike_F", "category" : "Moto Cross", "type" : "blanc", "base-purchase-price" : "15000", "base-sell-price" : "3000", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Dirtbike_Hellriders", "category" : "Moto Cross", "type" : "hellriders", "base-purchase-price" : "18000", "base-sell-price" : "3600", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_Sportbike_01", "category" : "Moto", "type" : "sport", "base-purchase-price" : "20000", "base-sell-price" : "4000", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_Bicycle_CityBike_Blue", "category" : "Vélo Ville", "type" : "bleu", "base-purchase-price" : "2000", "base-sell-price" : "400", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BPC_Bicycle_CityBike_Red", "category" : "Vélo Ville", "type" : "rouge", "base-purchase-price" : "2000", "base-sell-price" : "400", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BPC_Bicycle_Mountain_Bike_Red", "category" : "VTT", "type" : "rouge", "base-purchase-price" : "3000", "base-sell-price" : "600", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BP_Bicycle_Mountain_Bike_Blue", "category" : "VTT", "type" : "bleu", "base-purchase-price" : "3000", "base-sell-price" : "600", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BPC_Bicycle_Mountain_Bike_White", "category" : "VTT", "type" : "blanc", "base-purchase-price" : "3000", "base-sell-price" : "600", "delta-price" : "1", "can-be-purchased" : "false"},
+                    {"tradeable-code" : "BPC_Bicycle_Mountain_Bike_Green", "category" : "VTT", "type" : "vert", "base-purchase-price" : "3000", "base-sell-price" : "600", "delta-price" : "1", "can-be-purchased" : "false"},
+
+                    {"tradeable-code" : "BP_WheelBarrow_02", "category" : "Brouette", "type" : "bois", "base-purchase-price" : "-1", "base-sell-price" : "-1", "delta-price" : "1", "can-be-purchased" : "true"},
+                    {"tradeable-code" : "BP_WheelBarrow_01", "category" : "Brouette", "type" : "fer", "base-purchase-price" : "-1", "base-sell-price" : "-1", "delta-price" : "1", "can-be-purchased" : "true"},
+                ]
+        for car in cars:
+            if(car_select == car['tradeable-code']):
+                return car

@@ -1,4 +1,5 @@
 import time
+import requests
 
 class Ready:
 
@@ -49,14 +50,20 @@ class Ready:
             self.PRC_CHAT.doClean()
             return True
         elif(state == 'game'):
+            url = "https://rpfrance.inov-agency.com/check_bot.php?status=restart"
+            r = requests.get(url)
             if(self.CON.getReady()):
                 self.PRC_CHAT.doClean()
                 return True
         elif(state == 'steam'):
+            url = "https://rpfrance.inov-agency.com/check_bot.php?status=restart"
+            r = requests.get(url)
             self.RES.printer('Steam RESTART')
             self.CON.restart()
             return False
         else:
+            url = "https://rpfrance.inov-agency.com/check_bot.php?status=restart"
+            r = requests.get(url)
             if(self.CON.startGame()):
                 self.PRC_CHAT.doClean()
                 return True

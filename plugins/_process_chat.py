@@ -159,6 +159,8 @@ class Chat:
         self.RES.printer('SENDING MSG -> ' + message)
         if(read):
             data = self.read(message)
+            self.PAG.click(110,500)
+            time.sleep(0.5)
         else:
             self.copyToClip(message)
             self.PAG.hotkey('ctrl','v')

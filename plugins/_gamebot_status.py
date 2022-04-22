@@ -32,7 +32,7 @@ class CheckStatus(Thread):
         #global busyCheck
         while True:
             try:
-              deltatime = datetime.datetime.now(timezone.utc) - timedelta(hours=0, minutes=6, seconds=0)
+              deltatime = datetime.datetime.now(timezone.utc) - timedelta(hours=0, minutes=8, seconds=0)
               deltatime = deltatime.strftime('%Y%m%d%H%M%S')
               url = "https://rpfrance.inov-agency.com/check_bot.php?check=true&time="+str(deltatime)
               r = requests.get(url)

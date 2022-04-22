@@ -11,7 +11,8 @@ from plugins import _focus
 from plugins import _scb
 from dateutil import tz
 import pyautogui as PAG
-import os,sys
+import os,sys,string
+
 from lib.controllerFtpLogScum import Controller_Ftp_Log_Scum
 
 import configparser
@@ -19,12 +20,14 @@ import time, pytz
 from datetime import datetime, timedelta, timezone
 import requests, json, asyncio, re
 from random import *
+import random  as rd
 import subprocess
 import lib.fileio as fileio
 # Path to the file
 time_random_event = randint(180, 225)
 file_name_event_last = r"logs\spawn_event.txt"
 fileio.create_if_not_created(file_name_event_last)
+
 
 PAG.FAILSAFE = False
 PAG.PAUSE = 0.18
@@ -45,6 +48,45 @@ PRC_ACTION = _process_action.Action(RES, CON, SCB, PRC_CHAT, PAG)
 PRC = _process.Process(RES, CON, PRC_CHAT, PRC_ACTION, PAG, printToConsole)
 RDY = _ready.Ready(RES, FOC, CON, PRC_CHAT)
 timezone_paris = tz.gettz('Europe/Paris')
+
+'''
+PRC_CHAT.send(f"#ListVehicles")
+list_car = PRC_ACTION.getListCar(573042.438,-224655.375,368.012)
+for vehicule_pos in list_car:
+    break
+#print(list_car[vehicule_pos])
+car_select = list_car[vehicule_pos]
+
+
+print(car_select)
+
+
+
+#def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
+def id_generator(size=6, chars=string.ascii_uppercase):
+    return ''.join(rd.choice(chars) for _ in range(size))
+
+if(car_select['alias'] == ''):
+    alias = id_generator(3)+'-'+id_generator(2, "0123456789")
+    car_select['alias']  = alias
+    PRC_CHAT.send(f"#RenameVehicle {car_select['id']} \"{alias}\"")
+
+time.sleep(1000)
+#'''
+
+'''
+#print(PRC_ACTION.isPosNear(car_select))
+vehicule_id_pattern = re.compile(r"(.+)ID ([0-9]+)")
+spawn_v = PRC_CHAT.send(f"#spawnVehicle BP_Bicycle_CityBike_Blue 1",True)
+vehicule_id = vehicule_id_pattern.findall(spawn_v)
+print(vehicule_id)
+print(vehicule_id[0][1])
+PRC_CHAT.send(f"#RenameVehicle {vehicule_id[0][1]} \"LOEM\"")
+time.sleep(1000)
+
+#573042.438 Y=-224655.375 Z=368.012
+#'''
+
 
 response = None
 while response == None:
@@ -100,8 +142,9 @@ PAG.press('x')
 PAG.press('t')
 
 PRC_CHAT.teleportOrigin()
-time.sleep(60)
+time.sleep(1)
 PRC_CHAT.viewInfoPlayer()
+time.sleep(60)
 
 
 '''
@@ -208,7 +251,7 @@ while loop:
             deltatime = deltatime.strftime('%Y%m%d%H%M%S')
             if(int(last_command_user) <= int(deltatime)):
             '''
-            if(isTimeOut(last_command_user, 30)):
+            if(isTimeOut(last_command_user, 240)):
                 task = asyncio.ensure_future(Controller_Ftp_Log_Scum.checkLoginUser())
                 loop = asyncio.get_event_loop()
                 list_player = loop.run_until_complete(task)
@@ -271,6 +314,7 @@ while loop:
                 if(not RDY.doIt()):
                     RES.addError('Unable to get ready (MAIN)')
                 RES.send()
+                GB_CHK.setBusy(True)
                 last_command_user = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
                 PAG.press('esc')
                 PAG.press('x')
@@ -280,8 +324,10 @@ while loop:
                 url = "https://rpfrance.inov-agency.com/check_bot.php?status="+statut
                 r = requests.get(url)
                 PRC_CHAT.viewInfoPlayer()
+                GB_CHK.setBusy(False)
 
         if(GB_CHK.getBusy() == False):
+            nbr_busy_loop = 0
             task = asyncio.ensure_future(Controller_Ftp_Log_Scum.checkCommandUser())
             loop = asyncio.get_event_loop()
             listActions['list_user_command'] = loop.run_until_complete(task)
@@ -392,7 +438,13 @@ while loop:
                         '''
                         #elif(re.match(r"bug_teleport_to_zone", user_command['command_chat'])):
         else:
-            RES.printer("Bot is busy")
+            if(statut == 'run'):
+                nbr_busy_loop = nbr_busy_loop + 1
+                if(nbr_busy_loop > 3):
+                    GB_CHK.setBusy(False)
+                    nbr_busy_loop = 0
+
+            RES.printer("Bot is busy wait for the end of the current action")
 
     except Exception as e:
         RES.printer('Error in main loop'+ str(e))
