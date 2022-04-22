@@ -239,13 +239,15 @@ class Action:
         self.PRC_CHAT.doClean()
         #self.PRC_CHAT.send(prop_user['messages']['starterPack'])
         if(self.current_pos_start_pack == 0):
-            self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130")
+            pos_tel = "#teleport 574605.938 -229922.313 356.130"
         elif(self.current_pos_start_pack == 1):
-            self.PRC_CHAT.send(f"#teleport 574580.375 -230398.891 356.130")
+            pos_tel = "#teleport 574580.375 -230398.891 356.130"
         elif(self.current_pos_start_pack == 2):
-            self.PRC_CHAT.send(f"#teleport 567491.063 -225879.578 355.990")
+            pos_tel = "#teleport 567491.063 -225879.578 355.990"
         else:
-            self.PRC_CHAT.send(f"#teleport 575542.375 -230431.813 356.130")
+            pos_tel = "#teleport 575542.375 -230431.813 356.130"
+
+        self.PRC_CHAT.send(f"{pos_tel}")
         time.sleep(20)
         self.PRC_CHAT.send(f"#spawnitem BP_Weapon_BlackHawk_Crossbow 1")
         self.PRC_CHAT.send(f"#spawnItem Improvised_Quiver_01 1")
@@ -259,10 +261,11 @@ class Action:
         self.PRC_CHAT.send(f"#spawnitem BP_WeaponFlashlight_DesertEagle 1")
         self.PRC_CHAT.send(f"#spawnitem MRE_Cheeseburger 1")
         self.PRC_CHAT.send(f"#spawnvehicle BP_Quad_01_A 1")
-        self.PRC_CHAT.send(f"#teleport 574605.938 -229922.313 356.130 \"{prop_user['userID']}\"")
+        self.PRC_CHAT.send(f"#teleport {pos_tel} \"{prop_user['userID']}\"")
         self.PRC_CHAT.teleportOrigin()
         time.sleep(20)
         self.current_pos_start_pack = self.current_pos_start_pack + 1
+
         if(self.current_pos_start_pack > 3):
             self.current_pos_start_pack = 0
 
